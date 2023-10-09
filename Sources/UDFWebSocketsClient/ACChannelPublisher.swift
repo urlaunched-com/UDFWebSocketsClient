@@ -60,12 +60,12 @@ public struct ACChannelPublisher<Mapper: ACCChannelOutputMapping>: Publisher {
                 }
             })
 
-            channel.addOnUnsubscribe { [weak self] ch, _ in
-                guard ch.channelName == channelName else {
-                    return
-                }
-                self?.cancel()
-            }
+//            channel.addOnUnsubscribe { [weak self] ch, _ in
+//                guard ch.channelName == channelName else {
+//                    return
+//                }
+//                self?.cancel()
+//            }
 
             self.channel = channel
             if !channel.options.autoSubscribe {
