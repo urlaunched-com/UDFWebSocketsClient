@@ -56,8 +56,7 @@ public struct ACChannelPublisher<Mapper: ACCChannelOutputMapping>: Publisher {
                 }
 
                 if let output = self?.mapper.map(from: message) {
-                    Swift.print("channelName: \(channelName)\noutput: \(output)")
-//                    _ = self?.subscriber?.receive(output)
+                    _ = self?.subscriber?.receive(output)
                 }
             })
 
