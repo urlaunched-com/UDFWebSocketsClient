@@ -56,16 +56,18 @@ public struct ACChannelPublisher<Mapper: ACCChannelOutputMapping>: Publisher {
                 }
 
                 if let output = self?.mapper.map(from: message) {
-                    _ = self?.subscriber?.receive(output)
+                    Swift.print("channelName: \(channelName)\noutput: \(output)")
+//                    _ = self?.subscriber?.receive(output)
                 }
             })
 
+            let autoSubscribe = channel.options.autoSubscribe
             channel.addOnUnsubscribe { ch, _ in
-                guard ch.channelName == channelName, channel.options.autoSubscribe else {
+                guard ch.channelName == channelName, autoSubscribe else {
                     return
                 }
 
-                try? channel.subscribe()
+                try? ch.subscribe()
             }
 
             self.channel = channel
