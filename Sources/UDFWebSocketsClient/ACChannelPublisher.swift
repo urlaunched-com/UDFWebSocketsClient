@@ -61,8 +61,8 @@ public struct ACChannelPublisher<Mapper: ACCChannelOutputMapping>: Publisher {
             })
 
             let autoSubscribe = channel.options.autoSubscribe
-            channel.addOnUnsubscribe { ch, _ in
-                guard ch.channelName == channelName, autoSubscribe else {
+            channel.addOnUnsubscribe { [weak self] ch, _ in
+                guard ch.channelName == channelName, autoSubscribe, self?.subscriber != nil else {
                     return
                 }
 
@@ -78,8 +78,9 @@ public struct ACChannelPublisher<Mapper: ACCChannelOutputMapping>: Publisher {
         func cancel() {
             do {
                 try channel?.unsubscribe()
+                subscriber?.receive(completion: .finished)
             } catch {
-                _ = subscriber?.receive(completion: .failure(error))
+                subscriber?.receive(completion: .failure(error))
             }
             subscriber = nil
         }

@@ -25,10 +25,12 @@ public struct SocketChannelEffect<FlowID: Hashable, OM: ACCChannelOutputMapping,
     }
 
     public var upstream: AnyPublisher<any Action, Never> {
-        ACChannelPublisher(
-            mapper: outputMapper,
-            channelBuilder: channelBuilder
-        )
+        Deferred {
+            ACChannelPublisher(
+                mapper: outputMapper,
+                channelBuilder: channelBuilder
+            )
+        }
         .flatMap { output in
             Publishers.IsolatedState(from: store)
                 .map { state in
