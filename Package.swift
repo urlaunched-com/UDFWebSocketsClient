@@ -17,7 +17,8 @@ let package = Package(
     dependencies: [
         .package(url: "https://github.com/Maks-Jago/SwiftUI-UDF", from: "1.4.1-alpha.6"),
         .package(url: "https://github.com/nerzh/Action-Cable-Swift", from: "0.4.0"),
-        .package(url: "https://github.com/vapor/websocket-kit", from: "2.0.0"),
+        .package(url: "https://github.com/daltoniam/Starscream.git", from: "4.0.0")
+//        .package(url: "https://github.com/vapor/websocket-kit", from: "2.0.0"),
     ],
     targets: [
         .target(
@@ -25,7 +26,8 @@ let package = Package(
             dependencies: [
                 .product(name: "UDF", package: "SwiftUI-UDF"),
                 .product(name: "ActionCableSwift", package: "Action-Cable-Swift"),
-                .product(name: "WebSocketKit", package: "websocket-kit")
+                .product(name: "Starscream", package: "Starscream")
+//                .product(name: "WebSocketKit", package: "websocket-kit")
             ]
         )
     ]
