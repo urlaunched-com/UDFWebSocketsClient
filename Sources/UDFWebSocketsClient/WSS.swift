@@ -3,50 +3,50 @@ import Foundation
 import ActionCableSwift
 import Starscream
 
-class WSS: ACWebSocketProtocol, WebSocketDelegate {
-    var url: URL
-    var ws: WebSocket
+public final class WSS: ACWebSocketProtocol, WebSocketDelegate {
+    public var url: URL
+    public var ws: WebSocket
 
-    init(stringURL: String) {
+    public init(stringURL: String) {
         url = URL(string: stringURL)!
         ws = WebSocket(request: URLRequest(url: url))
         ws.delegate = self
     }
 
-    var onConnected: ((_ headers: [String : String]?) -> Void)?
-    var onDisconnected: ((_ reason: String?) -> Void)?
-    var onCancelled: (() -> Void)?
-    var onText: ((_ text: String) -> Void)?
-    var onBinary: ((_ data: Data) -> Void)?
-    var onPing: (() -> Void)?
-    var onPong: (() -> Void)?
+    public var onConnected: ((_ headers: [String : String]?) -> Void)?
+    public var onDisconnected: ((_ reason: String?) -> Void)?
+    public var onCancelled: (() -> Void)?
+    public var onText: ((_ text: String) -> Void)?
+    public var onBinary: ((_ data: Data) -> Void)?
+    public var onPing: (() -> Void)?
+    public var onPong: (() -> Void)?
 
-    func connect(headers: [String : String]?) {
+    public func connect(headers: [String : String]?) {
         ws.request.allHTTPHeaderFields = headers
         ws.connect()
     }
 
-    func disconnect() {
+    public func disconnect() {
         ws.disconnect()
     }
 
-    func send(data: Data) {
+    public func send(data: Data) {
         ws.write(data: data)
     }
 
-    func send(data: Data, _ completion: (() -> Void)?) {
+    public func send(data: Data, _ completion: (() -> Void)?) {
         ws.write(data: data, completion: completion)
     }
 
-    func send(text: String) {
+    public func send(text: String) {
         ws.write(string: text)
     }
 
-    func send(text: String, _ completion: (() -> Void)?) {
+    public func send(text: String, _ completion: (() -> Void)?) {
         ws.write(string: text, completion: completion)
     }
 
-    func didReceive(event: Starscream.WebSocketEvent, client: Starscream.WebSocketClient) {
+    public func didReceive(event: Starscream.WebSocketEvent, client: Starscream.WebSocketClient) {
         switch event {
         case .connected(let headers):
             onConnected?(headers)
