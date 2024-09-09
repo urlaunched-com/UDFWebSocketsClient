@@ -9,19 +9,25 @@ public struct SocketChannelEffect<FlowID: Hashable, OM: ACCChannelOutputMapping,
     var outputMapper: OM
     var actionMapper: AM
     var flowId: FlowID
+    var queue: DispatchQueue
+    var debounce: TimeInterval
 
     public init(
         store: any Store<AM.State>,
         channelBuilder: @escaping () -> ACChannel?,
         outputMapper: OM,
         actionMapper: AM,
-        flowId: FlowID
+        flowId: FlowID,
+        queue: DispatchQueue,
+        debounce: TimeInterval = 0.2
     ) {
         self.store = store
         self.channelBuilder = channelBuilder
         self.outputMapper = outputMapper
         self.actionMapper = actionMapper
         self.flowId = flowId
+        self.debounce = debounce
+        self.queue = queue
     }
 
     public var upstream: AnyPublisher<any Action, Never> {
@@ -30,6 +36,7 @@ public struct SocketChannelEffect<FlowID: Hashable, OM: ACCChannelOutputMapping,
                 mapper: outputMapper,
                 channelBuilder: channelBuilder
             )
+            .debounce(for: .seconds(debounce), scheduler: queue)
         }
         .flatMap { output in
             Publishers.IsolatedState(from: store)

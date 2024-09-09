@@ -15,7 +15,7 @@ let package = Package(
             targets: ["UDFWebSocketsClient"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/Maks-Jago/SwiftUI-UDF", from: "1.4.5-rc.1"),
+        .package(url: "https://github.com/Maks-Jago/SwiftUI-UDF", from: "1.4.5"),
         .package(url: "https://github.com/nerzh/Action-Cable-Swift", from: "0.4.0"),
         .package(url: "https://github.com/vapor/websocket-kit", from: "2.0.0")
     ],
