@@ -78,15 +78,15 @@ public final class WSS: ACWebSocketProtocol {
             }
             
             // Handle text messages
-            ws.onText { (ws, text) in
-                self.onText?(text)
+            ws.onText { [weak self] (ws, text) in
+                self?.onText?(text)
             }
             
             // Handle binary messages
-            ws.onBinary { (ws, buffer) in
+            ws.onBinary { [weak self] (ws, buffer) in
                 var data: Data = Data()
                 data.append(contentsOf: buffer.readableBytesView)
-                self.onBinary?(data)
+                self?.onBinary?(data)
             }
         }.cascade(to: promise)
         
