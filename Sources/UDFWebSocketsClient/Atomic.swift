@@ -10,47 +10,44 @@
 //===----------------------------------------------------------------------===//
 
 import Foundation
+import os
 
 /// A thread-safe property wrapper to guarantee atomic access and mutation of a value.
 ///
 /// The underlying value is protected by an `NSLock` to ensure that reads and writes are thread-safe.
 @propertyWrapper
 public struct Atomic<Value> {
-    
-    private var value: Value
-    private let lock = NSLock()
-    
-    /// Initializes the atomic wrapper with the provided initial value.
+    /// The lock that holds the protected value.
+    private let lock: OSAllocatedUnfairLock<Value>
+
+    /// Initializes the wrapper with the provided initial value.
     ///
-    /// - Parameter wrappedValue: The initial value to store in the atomic property.
-    public init(wrappedValue value: Value) {
-        self.value = value
+    /// - Parameter wrappedValue: The initial value to store inside the lock.
+    public init(wrappedValue: Value) {
+        // Initialize the lock with the initial state
+        self.lock = OSAllocatedUnfairLock(initialState: wrappedValue)
     }
-    
-    /// The wrapped value which provides thread-safe access and mutation.
-    ///
-    /// - Getter: Returns the current value, locking access to ensure thread safety.
-    /// - Setter: Stores the new value, locking access to ensure thread safety.
+
+    /// Provides thread-safe access and mutation.
     public var wrappedValue: Value {
-        get { return load() }
-        set { store(newValue: newValue) }
+        get {
+            lock.withLock { $0 }
+        }
+        set {
+            lock.withLock { state in
+                state = newValue
+            }
+        }
     }
-    
-    /// Loads the current value in a thread-safe manner.
+
+    /// Performs an in-place modification of the wrapped value in a single critical section.
     ///
-    /// - Returns: The current value after acquiring the lock.
-    private func load() -> Value {
-        lock.lock()
-        defer { lock.unlock() }
-        return value
-    }
-    
-    /// Stores a new value in a thread-safe manner.
-    ///
-    /// - Parameter newValue: The new value to store, protected by the lock.
-    private mutating func store(newValue: Value) {
-        lock.lock()
-        defer { lock.unlock() }
-        value = newValue
+    /// - Parameter block: A closure that receives an inout value to modify.
+    /// - Returns: The result of the closure.
+    @discardableResult
+    public func mutate<T>(_ block: (inout Value) throws -> T) rethrows -> T {
+        try lock.withLock { value in
+            try block(&value)
+        }
     }
 }
