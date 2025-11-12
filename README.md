@@ -20,7 +20,7 @@ To add UDFWebSocketsClient to your project, add the following dependency to your
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/youarelaunched/UDFWebSocketsClient.git", from: "1.0.0")
+    .package(url: "https://github.com/youarelaunched/UDFWebSocketsClient.git", from: "0.3.0")
 ]
 ```
 
@@ -62,6 +62,7 @@ final class WebSocketsMiddleware: BaseReducibleMiddleware<AppState> {
     enum Cancellation: Hashable {
         case socketChannelChats
         case socketChannelChat(Chat.ID)
+        case socketChannelNotifications
     }
 
     struct Environment {
@@ -131,7 +132,7 @@ final class WebSocketsMiddleware: BaseReducibleMiddleware<AppState> {
                 flowId: WebSocketFlow.id,
                 queue: queue
             ),
-            cancellation: Cancellation.socketChannelChats
+            cancellation: Cancellation.socketChannelNotifications
         )
     }
 }
@@ -258,4 +259,4 @@ Contributions are welcome! If you have any bug reports, feature requests, or sug
 
 ## Contact
 
-For questions or support, feel free to contact us at youarelaunched.com.
+For questions or support, feel free to contact us at urlaunched.com.
