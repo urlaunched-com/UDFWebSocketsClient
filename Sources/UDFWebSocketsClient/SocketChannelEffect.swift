@@ -62,12 +62,16 @@ public struct SocketChannelEffect<FlowID: Hashable, OM: ACCChannelOutputMapping,
                 mapper: outputMapper,
                 channelBuilder: channelBuilder
             )
-            .debounce(for: .seconds(debounce), scheduler: queue)
+            .collect(.byTime(queue, .seconds(debounce)))
         }
-        .flatMap { output in
+        .flatMap { outputs in
             Publishers.IsolatedState(from: store)
                 .map { state in
-                    actionMapper.mapAction(from: output, state: state)
+                    ActionGroup {
+                        for output in outputs {
+                            actionMapper.mapAction(from: output, state: state)
+                        }
+                    }
                 }
         }
         .catch { Just(Actions.Error(error: $0.localizedDescription, id: flowId)) }
