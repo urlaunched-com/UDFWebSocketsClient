@@ -74,6 +74,7 @@ public struct SocketChannelEffect<FlowID: Hashable, OM: ACCChannelOutputMapping,
                     }
                 }
         }
+        .receive(on: queue)
         .catch { Just(Actions.Error(error: $0.localizedDescription, id: flowId)) }
         .eraseToAnyPublisher()
     }
