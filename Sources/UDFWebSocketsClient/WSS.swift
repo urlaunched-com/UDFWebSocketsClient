@@ -15,6 +15,7 @@ import NIOHTTP1
 import NIOWebSocket
 import WebSocketKit
 import ActionCableSwift
+import os
 
 /// `WSS` is a WebSocket implementation that conforms to `ACWebSocketProtocol`.
 /// It uses NIO and WebSocketKit to manage WebSocket connections and handle events.
@@ -22,8 +23,13 @@ public final class WSS: ACWebSocketProtocol {
     
     public var url: URL
     private var eventLoopGroup: EventLoopGroup
-    @Atomic public var ws: WebSocket?
-    
+
+    private var _ws: OSAllocatedUnfairLock<WebSocket?> = .init(initialState: nil)
+    public var ws: WebSocket? {
+        get { _ws.withLock { $0 } }
+        set { _ws.withLock { $0 = newValue } }
+    }
+
     public var onConnected: ((_ headers: [String : String]?) -> Void)?
     public var onDisconnected: ((_ reason: String?) -> Void)?
     public var onCancelled: (() -> Void)?
@@ -54,7 +60,7 @@ public final class WSS: ACWebSocketProtocol {
         
         WebSocket.connect(to: url.absoluteString, headers: httpHeaders, on: eventLoopGroup) { ws in
             self.ws = ws
-            
+
             // Handle ping
             ws.onPing { [weak self] (ws, _) in
                 self?.onPing?()
@@ -99,6 +105,7 @@ public final class WSS: ACWebSocketProtocol {
     /// Disconnects the WebSocket connection.
     public func disconnect() {
         ws?.close(promise: nil)
+        ws = nil
     }
     
     /// Sends binary data over the WebSocket.
