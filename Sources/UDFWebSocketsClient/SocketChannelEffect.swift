@@ -19,7 +19,7 @@ import Combine
 /// This effect allows for state-driven interaction with a WebSocket-like channel using Combine.
 public struct SocketChannelEffect<FlowID: Hashable, OM: ACCChannelOutputMapping, AM: ChannelActionsMapping>: Effectable where OM.Output == AM.Output {
     
-    unowned var store: any Store<AM.State>
+    var store: any Store<AM.State>
     var channelBuilder: () -> ACChannel?
     var outputMapper: OM
     var actionMapper: AM
