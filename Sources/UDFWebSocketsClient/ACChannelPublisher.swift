@@ -17,10 +17,10 @@ import ActionCableSwift
 public struct ACChannelPublisher<Mapper: ACCChannelOutputMapping>: Publisher {
     public typealias Failure = Error
     public typealias Output = Mapper.Output
-    
+
     public var mapper: Mapper
     public var channelBuilder: () -> ACChannel?
-    
+
     /// Initializes a new `ACChannelPublisher` with the provided mapper and channel builder.
     ///
     /// - Parameters:
@@ -30,7 +30,7 @@ public struct ACChannelPublisher<Mapper: ACCChannelOutputMapping>: Publisher {
         self.mapper = mapper
         self.channelBuilder = channelBuilder
     }
-    
+
     /// Subscribes the provided `Subscriber` to this publisher.
     ///
     /// - Parameter subscriber: The subscriber that will receive values from the channel.
@@ -43,14 +43,15 @@ public struct ACChannelPublisher<Mapper: ACCChannelOutputMapping>: Publisher {
             )
         )
     }
-    
+
     /// A subscription that manages the connection to the ActionCable channel and handles message mapping.
     private final class ChannelSubscription<S: Subscriber>: NSObject, Subscription where S.Input == Output, S.Failure == Failure {
         var subscriber: S?
         var channel: ACChannel?
         var mapper: Mapper
         var channelBuilder: () -> ACChannel?
-        
+        var isCancelled = false
+
         /// Initializes the subscription with the subscriber, channel builder, and mapper.
         ///
         /// - Parameters:
@@ -63,58 +64,78 @@ public struct ACChannelPublisher<Mapper: ACCChannelOutputMapping>: Publisher {
             super.init()
             self.subscriber = subscriber
         }
-        
-        /// Requests a certain demand for values from the channel.
-        ///
-        /// - Parameter demand: The number of values the subscriber is ready to receive.
+
         func request(_ demand: Subscribers.Demand) {
             guard demand > 0 else {
                 return
             }
-            
+
+            // Do not process any demand if subscription was cancelled
+            guard !isCancelled else {
+                return
+            }
+
+            // If the channel is already set up, we don't need to configure it again
+            if channel != nil {
+                return
+            }
+
             guard let channel = channelBuilder() else {
                 return
             }
-            
+
             let channelName = channel.channelName
-            
+
             // Listen for messages from the channel
-            channel.addOnMessage({ [weak self] ch, message in
-                guard ch.channelName == channelName, let message else {
+            channel.addOnMessage { [weak self] ch, message in
+                guard
+                    let self,
+                    !self.isCancelled,
+                    ch.channelName == channelName,
+                    let message
+                else {
                     return
                 }
-                
+
                 // Map the message and send the output to the subscriber
-                if let output = self?.mapper.map(from: message) {
-                    _ = self?.subscriber?.receive(output)
+                if let output = self.mapper.map(from: message) {
+                    _ = self.subscriber?.receive(output)
                 }
-            })
-            
+            }
+
             // Handle automatic re-subscription upon unsubscription
             let autoSubscribe = channel.options.autoSubscribe
             channel.addOnUnsubscribe { [weak self] ch, _ in
-                guard ch.channelName == channelName, autoSubscribe, self?.subscriber != nil else {
+                guard
+                    let self,
+                    !self.isCancelled,
+                    ch.channelName == channelName,
+                    autoSubscribe,
+                    self.subscriber != nil
+                else {
                     return
                 }
-                
+
                 try? ch.subscribe()
             }
-            
+
             self.channel = channel
             if !channel.options.autoSubscribe {
                 try? channel.subscribe()
             }
         }
-        
+
         /// Cancels the subscription and unsubscribes from the channel.
         func cancel() {
-            do {
-                try channel?.unsubscribe()
-                subscriber?.receive(completion: .finished)
-            } catch {
-                subscriber?.receive(completion: .failure(error))
-            }
+            // Mark the subscription as cancelled so callbacks won't act on it anymore
+            isCancelled = true
+
+            // Best-effort unsubscribe from the channel; ignore errors here
+            try? channel?.unsubscribe()
+
+            // Drop references to allow deallocation and break retain cycles
             subscriber = nil
+            channel = nil
         }
     }
 }
