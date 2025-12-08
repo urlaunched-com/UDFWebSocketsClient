@@ -63,6 +63,7 @@ public struct SocketChannelEffect<FlowID: Hashable, OM: ACCChannelOutputMapping,
                 channelBuilder: channelBuilder
             )
             .collect(.byTime(queue, .seconds(debounce)))
+            .debounce(for: .seconds(0.2), scheduler: queue)
         }
         .flatMap { outputs -> AnyPublisher<any Action, Never> in
             guard let store else {
