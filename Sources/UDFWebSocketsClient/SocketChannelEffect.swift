@@ -19,7 +19,7 @@ import Combine
 /// This effect allows for state-driven interaction with a WebSocket-like channel using Combine.
 public struct SocketChannelEffect<FlowID: Hashable, OM: ACCChannelOutputMapping, AM: ChannelActionsMapping>: Effectable where OM.Output == AM.Output {
     
-    var store: any Store<AM.State>
+    weak var store: (any Store<AM.State>)?
     var channelBuilder: () -> ACChannel?
     var outputMapper: OM
     var actionMapper: AM
@@ -63,9 +63,14 @@ public struct SocketChannelEffect<FlowID: Hashable, OM: ACCChannelOutputMapping,
                 channelBuilder: channelBuilder
             )
             .collect(.byTime(queue, .seconds(debounce)))
+            .debounce(for: .seconds(0.2), scheduler: queue)
         }
-        .flatMap { outputs in
-            Publishers.IsolatedState(from: store)
+        .flatMap { outputs -> AnyPublisher<any Action, Never> in
+            guard let store else {
+                return Just(ActionGroup()).eraseToAnyPublisher()
+            }
+
+            return Publishers.IsolatedState(from: store)
                 .map { state in
                     ActionGroup {
                         for output in outputs {
@@ -73,6 +78,7 @@ public struct SocketChannelEffect<FlowID: Hashable, OM: ACCChannelOutputMapping,
                         }
                     }
                 }
+                .eraseToAnyPublisher()
         }
         .receive(on: queue)
         .catch { Just(Actions.Error(error: $0.localizedDescription, id: flowId)) }
