@@ -64,7 +64,10 @@ public struct ACChannelPublisher<Mapper: ACCChannelOutputMapping>: Publisher {
             super.init()
             self.subscriber = subscriber
         }
-
+        
+        /// Requests a certain demand for values from the channel.
+        ///
+        /// - Parameter demand: The number of values the subscriber is ready to receive.
         func request(_ demand: Subscribers.Demand) {
             guard demand > 0 else {
                 return
