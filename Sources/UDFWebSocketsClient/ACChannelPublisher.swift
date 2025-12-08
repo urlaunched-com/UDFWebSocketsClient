@@ -127,13 +127,15 @@ public struct ACChannelPublisher<Mapper: ACCChannelOutputMapping>: Publisher {
 
         /// Cancels the subscription and unsubscribes from the channel.
         func cancel() {
-            // Mark the subscription as cancelled so callbacks won't act on it anymore
             isCancelled = true
 
-            // Best-effort unsubscribe from the channel; ignore errors here
-            try? channel?.unsubscribe()
+            do {
+                try channel?.unsubscribe()
+                subscriber?.receive(completion: .finished)
+            } catch {
+                subscriber?.receive(completion: .failure(error))
+            }
 
-            // Drop references to allow deallocation and break retain cycles
             subscriber = nil
             channel = nil
         }
