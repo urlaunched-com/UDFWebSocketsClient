@@ -44,7 +44,7 @@ public struct SocketChannelEffect<FlowID: Hashable, OM: ACCChannelOutputMapping,
         actionMapper: AM,
         flowId: FlowID,
         queue: DispatchQueue,
-        debounce: TimeInterval = 0.2
+        debounce: TimeInterval = 0.33
     ) {
         self.store = store
         self.channelBuilder = channelBuilder

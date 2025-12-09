@@ -16,16 +16,16 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/Maks-Jago/SwiftUI-UDF", from: "1.4.5"),
-        .package(url: "https://github.com/nerzh/Action-Cable-Swift", from: "1.0.1"),
-        .package(url: "https://github.com/vapor/websocket-kit", from: "2.0.0")
+        .package(url: "https://github.com/nerzh/Action-Cable-Swift", from: "1.0.1")
+//        .package(url: "https://github.com/vapor/websocket-kit", from: "2.0.0")
     ],
     targets: [
         .target(
             name: "UDFWebSocketsClient",
             dependencies: [
                 .product(name: "UDF", package: "SwiftUI-UDF"),
-                .product(name: "ActionCableSwift", package: "Action-Cable-Swift"),
-                .product(name: "WebSocketKit", package: "websocket-kit")
+                .product(name: "ActionCableSwift", package: "Action-Cable-Swift")
+//                .product(name: "WebSocketKit", package: "websocket-kit")
             ]
         )
     ]
