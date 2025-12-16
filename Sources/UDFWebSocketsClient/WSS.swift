@@ -56,56 +56,64 @@ public final class WSS: ACWebSocketProtocol {
         headers?.forEach { (name, value) in
             httpHeaders.add(name: name, value: value)
         }
-        let promise: EventLoopPromise<Void> = eventLoopGroup.next().makePromise(of: Void.self)
-        
-        WebSocket.connect(to: url.absoluteString, headers: httpHeaders, on: eventLoopGroup) { ws in
+
+        let future = WebSocket.connect(to: url.absoluteString, headers: httpHeaders, on: eventLoopGroup) { [weak self] ws in
+            guard let self = self else { return }
             self.ws = ws
 
             // Handle ping
-            ws.onPing { [weak self] (ws, _) in
-                self?.onPing?()
+            ws.onPing { [weak self] (_, _) in
+                if let onPing = self?.onPing { onPing() }
             }
-            
+
             // Handle pong
-            ws.onPong { [weak self] (ws, _) in
-                self?.onPong?()
+            ws.onPong { [weak self] (_, _) in
+                if let onPong = self?.onPong { onPong() }
             }
-            
+
+            // Handle text messages
+            ws.onText { [weak self] (_, text) in
+                guard let self = self else { return }
+                if let onText = self.onText { onText(text) }
+            }
+
+            // Handle binary messages
+            ws.onBinary { [weak self] (_, buffer) in
+                guard let self = self else { return }
+                let data = Data(buffer.readableBytesView)
+                if let onBinary = self.onBinary { onBinary(data) }
+            }
+
             // Handle close events
             ws.onClose.whenComplete { [weak self] (result) in
+                guard let self = self else { return }
                 switch result {
                 case .success:
-                    self?.onDisconnected?(nil)
-                    self?.onCancelled?()
+                    if let onDisconnected = self.onDisconnected { onDisconnected(nil) }
                 case let .failure(error):
-                    self?.onDisconnected?(error.localizedDescription)
-                    self?.onCancelled?()
+                    if let onDisconnected = self.onDisconnected { onDisconnected(error.localizedDescription) }
                 }
+                if let onCancelled = self.onCancelled { onCancelled() }
             }
-            
-            // Handle text messages
-            ws.onText { [weak self] (ws, text) in
-                self?.onText?(text)
+        }
+
+        future.whenComplete { [weak self] result in
+            guard let self = self else { return }
+            switch result {
+            case .success:
+                if let onConnected = self.onConnected { onConnected(nil) }
+            case .failure(let error):
+                if let onDisconnected = self.onDisconnected { onDisconnected(error.localizedDescription) }
+                if let onCancelled = self.onCancelled { onCancelled() }
             }
-            
-            // Handle binary messages
-            ws.onBinary { [weak self] (ws, buffer) in
-                var data: Data = Data()
-                data.append(contentsOf: buffer.readableBytesView)
-                self?.onBinary?(data)
-            }
-        }.cascade(to: promise)
-        
-        // Trigger the connection callback on success
-        promise.futureResult.whenSuccess { [weak self] (_) in
-            self?.onConnected?(nil)
         }
     }
     
     /// Disconnects the WebSocket connection.
     public func disconnect() {
-        ws?.close(promise: nil)
-        ws = nil
+        guard let socket = self.ws else { return }
+        self.ws = nil
+        socket.close(promise: nil)
     }
     
     /// Sends binary data over the WebSocket.
@@ -121,9 +129,13 @@ public final class WSS: ACWebSocketProtocol {
     ///   - data: The binary data to send.
     ///   - completion: A closure called when the send operation completes.
     public func send(data: Data, _ completion: (() -> Void)?) {
-        let promise: EventLoopPromise<Void>? = ws?.eventLoop.next().makePromise(of: Void.self)
-        ws?.send([UInt8](data), promise: promise)
-        promise?.futureResult.whenComplete { (_) in
+        guard let ws = self.ws else {
+            completion?()
+            return
+        }
+        let promise = ws.eventLoop.makePromise(of: Void.self)
+        ws.send([UInt8](data), promise: promise)
+        promise.futureResult.whenComplete { _ in
             completion?()
         }
     }
@@ -141,10 +153,23 @@ public final class WSS: ACWebSocketProtocol {
     ///   - text: The text message to send.
     ///   - completion: A closure called when the send operation completes.
     public func send(text: String, _ completion: (() -> Void)?) {
-        let promise: EventLoopPromise<Void>? = ws?.eventLoop.next().makePromise(of: Void.self)
-        ws?.send(text, promise: promise)
-        promise?.futureResult.whenComplete { (_) in
+        guard let ws = self.ws else {
+            completion?()
+            return
+        }
+        let promise = ws.eventLoop.makePromise(of: Void.self)
+        ws.send(text, promise: promise)
+        promise.futureResult.whenComplete { _ in
             completion?()
         }
+    }
+
+    deinit {
+        // Ensure the WebSocket is closed if still open
+        ws?.close(promise: nil)
+        ws = nil
+
+        // Shutdown the EventLoopGroup gracefully to avoid thread/resource leaks
+        eventLoopGroup.shutdownGracefully { _ in }
     }
 }
