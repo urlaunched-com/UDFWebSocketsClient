@@ -173,3 +173,8 @@ public final class WSS: ACWebSocketProtocol {
         eventLoopGroup.shutdownGracefully { _ in }
     }
 }
+// MARK: - Sendable Conformance
+// WSS manages internal synchronization (lock for `ws`, event-loop confinement for callbacks).
+// We declare @unchecked Sendable to allow safe cross-concurrency usage under these guarantees.
+extension WSS: @unchecked Sendable {}
+
